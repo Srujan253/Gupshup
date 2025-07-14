@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuthStore } from "../store/useAuthStore";
+import { useAuthStore } from "../store/useAuthStore.js";
 import {
   MessageSquare,
   User,
@@ -7,7 +7,10 @@ import {
   Eye,
   EyeOff,
   Lock,
+  Loader2,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import AuthImagePattern from "../components/AuthImagePattern.jsx";
 
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,7 +20,7 @@ const SignUpPage = () => {
     password: "",
   });
 
-  const { signup } = useAuthStore();
+  const { signup, isSigningUp } = useAuthStore();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -34,7 +37,9 @@ const SignUpPage = () => {
                 <MessageSquare className="size-6 text-primary" />
               </div>
               <h1 className="text-2xl font-bold mt-2">Create Account</h1>
-              <p className="text-base-content/60">Get started with your free account</p>
+              <p className="text-base-content/60">
+                Get started with your free account
+              </p>
             </div>
           </div>
 
@@ -45,7 +50,6 @@ const SignUpPage = () => {
                 <span className="label-text font-medium">Full Name</span>
               </label>
               <div className="relative h-12">
-               
                 <input
                   type="text"
                   className="input input-bordered w-full pl-10 h-full bg-base-100 text-base-content 
@@ -56,7 +60,7 @@ const SignUpPage = () => {
                     setFormData({ ...formData, fullName: e.target.value })
                   }
                 />
-                 <div className="absolute top-1/2 left-3 -translate-y-1/2  rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <div className="absolute top-1/2 left-3 -translate-y-1/2  rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                   <User className="size-5 text-base-content" />
                 </div>
               </div>
@@ -68,7 +72,6 @@ const SignUpPage = () => {
                 <span className="label-text font-medium">Email</span>
               </label>
               <div className="relative h-12">
-                
                 <input
                   type="email"
                   className="input input-bordered w-full pl-10 h-full bg-base-100 text-base-content 
@@ -86,20 +89,21 @@ const SignUpPage = () => {
             </div>
 
             {/* Password */}
-              <div className="form-control">
+            <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">Password</span>
               </label>
               <div className="relative">
-               
                 <input
                   type={showPassword ? "text" : "password"}
                   className={`input input-bordered w-full pl-10`}
                   placeholder="••••••••"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                 />
-                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="size-5 text-base-content/40" />
                 </div>
                 <button
@@ -116,10 +120,38 @@ const SignUpPage = () => {
               </div>
             </div>
 
-            
+            {/* Create Account Button */}
+            <button
+              type="submit"
+              className="btn btn-primary w-full"
+              disabled={isSigningUp}
+            >
+              {isSigningUp ? (
+                <>
+                  <Loader2 className="size-5 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                "Create Account"
+              )}
+            </button>
           </form>
+
+          <div className="text-center">
+            <p className="text-base-content/60">
+              Already have an account?{" "}
+              <Link to="/login" className="link link-primary">
+                Sign in
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
+
+      <AuthImagePattern
+        title="Join the Conversation"
+        subtitle="Connect with friends and communities stay touched with the loved ones and have fun"
+      />
     </div>
   );
 };
