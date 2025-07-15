@@ -3,11 +3,12 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 export const signup = async (req, res) => {
-  const { email, fullname, password } = req.body;
+  const { fullName,email, password } = req.body;
+console.log(req.body);
 
   try {
 
-    if(!email || !fullname || !password) {
+    if(!email || !fullName || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
     //verify password length
@@ -30,7 +31,7 @@ export const signup = async (req, res) => {
     //create new user
     const newUser = new User({
       email: email,
-      fullname: fullname,
+      fullname: fullName,
       password: hashedPassword,
     });
 
@@ -113,7 +114,7 @@ export const updateProfile = async (req, res) => {
 
 export const checkAuth = (req, res) => {
   try {
-    res.status(200).json({ user: req.user });
+    res.status(200).json(req.user);
   } catch (error) {
     console.error("Error during authentication check:", error.message);
     res.status(500).json({ message: "Internal server error" });
