@@ -70,7 +70,7 @@ console.error("Signup failed:", error.response?.data?.message || error.message);
     set({isLoggingIn:false});
   }
  },
-   updateProfile: async (data) => {
+ updateProfile: async (data) => {
     set({ isUpdatingProfile: true });
     try {
       const res = await axiosInstance.put("/auth/update-profile", data);

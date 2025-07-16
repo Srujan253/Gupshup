@@ -95,6 +95,7 @@ try{
 
 export const updateProfile = async (req, res) => {
   try {
+    // Use consistent field name: profilePic
     const { profilePic } = req.body;
     const userID = req.user._id;
 
@@ -105,7 +106,39 @@ export const updateProfile = async (req, res) => {
     console.log("Uploading to Cloudinary...");
     let uploadResponse;
     try {
-      uploadResponse = await cloudinary.uploader.upload(profilePic);
+      // Check if file is large (base64 string length > ~20MB)
+      const base64Length = profilePic.length * (3/4) - (profilePic.endsWith('==') ? 2 : profilePic.endsWith('=') ? 1 : 0);
+      let imageBuffer = Buffer.from(profilePic.replace(/^data:image\/(png|jpeg|jpg);base64,/, ''), 'base64');
+
+      // Compress image using sharp
+      let compressedBuffer;
+      try {
+        const sharp = (await import('sharp')).default;
+        compressedBuffer = await sharp(imageBuffer)
+          .resize({ width: 1000 }) // adjust as needed
+          .jpeg({ quality: 80 })
+          .toBuffer();
+      } catch (err) {
+        console.warn('Sharp compression failed, using original image. Reason:', err?.message || err);
+        compressedBuffer = imageBuffer;
+      }
+
+      // If large, use upload_large
+      if (base64Length > 20 * 1024 * 1024) {
+        uploadResponse = await cloudinary.uploader.upload_large(`data:image/jpeg;base64,${compressedBuffer.toString('base64')}`,
+          {
+            resource_type: 'image',
+            chunk_size: 6000000,
+            timeout: 120000
+          }
+        );
+      } else {
+        uploadResponse = await cloudinary.uploader.upload(`data:image/jpeg;base64,${compressedBuffer.toString('base64')}`,
+          {
+            timeout: 120000
+          }
+        );
+      }
     } catch (uploadErr) {
       console.error("Cloudinary upload failed:", uploadErr?.message || uploadErr);
       return res.status(500).json({ message: "Cloudinary upload failed" });
@@ -117,7 +150,8 @@ export const updateProfile = async (req, res) => {
       { new: true }
     );
 
-    res.status(200).json({ updatedUser });
+    // Return the updated user object directly
+    res.status(200).json(updatedUser);
   } catch (error) {
     console.error("Error during profile update:", error?.message || error);
     res.status(500).json({ message: "Internal server error" });

@@ -16,7 +16,7 @@ import mongoose from "mongoose";
             required:true,
             minlength:6,
         },
-        profilePicture:{
+        profilePic:{
             type:String,
             default:"",
             

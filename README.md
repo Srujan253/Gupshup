@@ -68,3 +68,4 @@ This backend is built with **Node.js**, **Express.js**, and **MongoDB (Mongoose)
 This structure keeps your code **clean**, **organized**, and **easy to scale**. You can quickly add new features or update existing ones without confusion.
 
 ---
+
