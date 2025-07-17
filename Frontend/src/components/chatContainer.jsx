@@ -6,7 +6,7 @@ import MessageSkeleton from "./Skeltons/MessageSkeleton.jsx";
 import { useAuthStore } from "../store/useAuthStore.js";
 import { formatMessageTime } from "../lib/utils.js";
 const ChatContainer = () => {
-  const { messages, getMessages, isMessagesLoading, selectedUser } =
+  const { messages, getMessages, isMessagesLoading, selectedUser,subscribeToMessages ,unsubscribeToMessages} =
     useChatStore();
   const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
@@ -14,10 +14,20 @@ const ChatContainer = () => {
   useEffect(() => {
     if (selectedUser?._id) {
       getMessages(selectedUser._id);
+      subscribeToMessages();
+
+      return () => {
+        unsubscribeToMessages();
+      }
     }
-  }, [selectedUser?._id, getMessages]);
+  }, [selectedUser?._id, getMessages,unsubscribeToMessages,subscribeToMessages]);
 
   if (!selectedUser) return <div>Select a chat to start messaging.</div>;
+  useEffect(()=>{
+      if(messageEndRef.current && messages.length > 0) {
+        messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+  },[messages]);
   if (isMessagesLoading) {
     return (
       <div className="flex-1 flex flex-col overflow-auto">
@@ -27,8 +37,8 @@ const ChatContainer = () => {
       </div>
     );
   }
-  console.log(messages);
-  console.log("Selected User:", selectedUser.fullname);
+  // console.log(messages);
+  // console.log("Selected User:", selectedUser.fullname);
 
   return (
     <div className="flex-1 flex flex-col overflow-auto">

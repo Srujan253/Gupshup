@@ -1,0 +1,23 @@
+{
+  "name": "gupshup",
+  "version": "1.0.0",
+  "description": "This backend is built with **Node.js**, **Express.js**, and **MongoDB (Mongoose)**. Below is a simple explanation of how the project is organized and what each part does.",
+  "main": "index.js",
+  "scripts": {
+    "build":"npm install --prefix Backend && npm install --prefix Frontend && npm run build --prefix Frontend",
+    "start":"npm run start --prefix Backend"
+     
+
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Srujan253/whispr.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Srujan253/whispr/issues"
+  },
+  "homepage": "https://github.com/Srujan253/whispr#readme"
+}
