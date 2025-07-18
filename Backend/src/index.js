@@ -20,6 +20,13 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(express.json({ limit: "10mb" }));
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' data:; img-src 'self' data:; connect-src *"
+  );
+  next();
+});
 app.use(cookieParser());
 const allowedOrigins = [
   "http://localhost:5173",                  // Local dev
