@@ -56,7 +56,7 @@ if (process.env.NODE_ENV === "production") {
 
   // ✅ Catch-all route for frontend routing (Render-safe version)
   app.get('/{*any}', (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+  res.sendFile(path.join(__dirname, "../../frontend/dist/index.html"));
   });
 }
 
