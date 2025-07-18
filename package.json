@@ -1,20 +1,22 @@
 {
   "name": "gupshup",
   "version": "1.0.0",
-  "description": "This backend is built with **Node.js**, **Express.js**, and **MongoDB (Mongoose)**. Below is a simple explanation of how the project is organized and what each part does.",
-  "main": "index.js",
+  "description": "Full-stack chat app using Node.js, Express.js, MongoDB, and Vite + React.",
   "scripts": {
-    "build":"npm install --prefix Backend && npm install --prefix Frontend && npm run build --prefix Frontend",
-    "start":"npm run start --prefix Backend"
-     
-
+    "build": "npm install --prefix Backend && npm install --prefix Frontend && npm run build --prefix Frontend",
+    "start": "npm run start --prefix Backend",
+    "dev": "concurrently \"npm run dev --prefix Backend\" \"npm run dev --prefix Frontend\""
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "concurrently": "^8.0.0"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Srujan253/whispr.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Srujan",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Srujan253/whispr/issues"

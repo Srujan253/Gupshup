@@ -4,22 +4,28 @@ import http from "http";
 import path from "path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
-import { initSocket } from "./lib/socket.js"; // 👈 new
+import { initSocket } from "./lib/socket.js";
 
+// Setup __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load env vars
 dotenv.config();
 
 const PORT = process.env.PORT || 5001;
-const __dirname = path.resolve();
-
 const app = express();
 const server = http.createServer(app);
 
 // Middleware
 app.use(express.json({ limit: "10mb" }));
+app.use(cookieParser());
+
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
@@ -27,12 +33,8 @@ app.use((req, res, next) => {
   );
   next();
 });
-app.use(cookieParser());
-const allowedOrigins = [
-  "http://localhost:5173",                  // Local dev
-  "https://gupshup-rbcp.onrender.com",      // Production frontend
-];
 
+// CORS Configuration
 app.use(
   cors({
     origin: process.env.NODE_ENV === "production"
@@ -42,13 +44,11 @@ app.use(
   })
 );
 
-
-
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-// Debug Registered Routes
+// Route Logger (optional)
 try {
   console.log("\n🔍 Registered Routes:");
   app._router?.stack?.forEach((middleware) => {
@@ -66,18 +66,17 @@ try {
 } catch (err) {
   console.error("Route logging failed safely:", err.message);
 }
-// Serve Frontend in Production
+
+// Serve frontend build in production
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../Frontend/dist")));
 
-  // ✅ Catch-all route for frontend routing (Render-safe version)
-  app.get('/{*any}', (req, res) => {
-  res.sendFile(path.join(__dirname, "../../Frontend/dist/index.html"));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../Frontend/dist/index.html"));
   });
 }
 
-
-// Init socket.io
+// Initialize socket.io
 initSocket(server);
 
 // Start server
