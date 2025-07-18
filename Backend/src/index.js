@@ -8,7 +8,22 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
-import { initSocket } from "./lib/socket.js"; // 👈 new
+import { initSocket } from "./lib/socket.js"; 
+import helmet from "helmet";
+
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+      connectSrc: ["'self'", "https://gupshup-rbcp.onrender.com", "wss://gupshup-rbcp.onrender.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"], // Allow image loading from external services like Cloudinary
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    },
+  })
+);
+// 👈 new
 
 dotenv.config();
 
