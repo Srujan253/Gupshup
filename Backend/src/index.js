@@ -4,15 +4,12 @@ import http from "http";
 import path from "path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
-import { initSocket } from "./lib/socket.js"; 
-import helmet from "helmet";
-
-
-// 👈 new
+import { initSocket } from "./lib/socket.js";
 
 dotenv.config();
 
@@ -22,65 +19,53 @@ const __dirname = path.resolve();
 const app = express();
 const server = http.createServer(app);
 
+// ✅ Helmet CSP Middleware
 app.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
       connectSrc: ["'self'", "https://gupshup-rbcp.onrender.com", "wss://gupshup-rbcp.onrender.com"],
-       imgSrc: [
+      imgSrc: [
         "'self'",
         "data:",
         "https://res.cloudinary.com",
         "https://randomuser.me"
-      ], // Allow image loading from external services like Cloudinary
+      ],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
     },
   })
 );
 
-// Middleware
+// ✅ Middleware
 app.use(express.json({ limit: "10mb" }));
-app.use((req, res, next) => {
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' data:; img-src 'self' data:; connect-src *"
-  );
-  next();
-});
 app.use(cookieParser());
+
+// ✅ CORS config
 const allowedOrigins = [
-  "http://localhost:5173",                  // Local dev
-  "https://gupshup-rbcp.onrender.com",      // Production frontend
+  "http://localhost:5173",
+  "https://gupshup-rbcp.onrender.com",
 ];
-
-
-
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
       } else {
-        return callback(new Error("Not allowed by CORS"));
+        callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
   })
 );
 
-
-
-
-// Routes
+// ✅ Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-// Debug Registered Routes
+// 🔍 Debug Registered Routes
 try {
   console.log("\n🔍 Registered Routes:");
   app._router?.stack?.forEach((middleware) => {
@@ -98,21 +83,20 @@ try {
 } catch (err) {
   console.error("Route logging failed safely:", err.message);
 }
-// Serve Frontend in Production
+
+// ✅ Serve frontend in production
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../Frontend/dist")));
 
-  // ✅ Catch-all route for frontend routing (Render-safe version)
-  app.get('/{*any}', (req, res) => {
+  app.get("/*", (req, res) => {
     res.sendFile(path.join(__dirname, "../Frontend", "dist", "index.html"));
   });
 }
 
-
-// Init socket.io
+// ✅ Initialize Socket.IO
 initSocket(server);
 
-// Start server
+// ✅ Start server
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on PORT: ${PORT}`);
   connectDB();
