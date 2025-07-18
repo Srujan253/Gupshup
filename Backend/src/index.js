@@ -11,6 +11,17 @@ import { connectDB } from "./lib/db.js";
 import { initSocket } from "./lib/socket.js"; 
 import helmet from "helmet";
 
+
+// 👈 new
+
+dotenv.config();
+
+const PORT = process.env.PORT || 5001;
+const __dirname = path.resolve();
+
+const app = express();
+const server = http.createServer(app);
+
 app.use(
   helmet.contentSecurityPolicy({
     directives: {
@@ -23,15 +34,6 @@ app.use(
     },
   })
 );
-// 👈 new
-
-dotenv.config();
-
-const PORT = process.env.PORT || 5001;
-const __dirname = path.resolve();
-
-const app = express();
-const server = http.createServer(app);
 
 // Middleware
 app.use(express.json({ limit: "10mb" }));
