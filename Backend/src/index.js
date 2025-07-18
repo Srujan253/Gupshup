@@ -28,7 +28,12 @@ app.use(
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
       connectSrc: ["'self'", "https://gupshup-rbcp.onrender.com", "wss://gupshup-rbcp.onrender.com"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"], // Allow image loading from external services like Cloudinary
+       imgSrc: [
+        "'self'",
+        "data:",
+        "https://res.cloudinary.com",
+        "https://randomuser.me"
+      ], // Allow image loading from external services like Cloudinary
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
     },
