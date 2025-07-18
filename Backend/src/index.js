@@ -21,11 +21,22 @@ const server = http.createServer(app);
 // Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+const allowedOrigins = [
+  "http://localhost:5173",                  // Local dev
+  "https://gupshup-rbcp.onrender.com",      // Production frontend
+];
+
 app.use(
   cors({
-    origin: process.env.NODE_ENV === "production"
-      ? "https://gupshup-rbcp.onrender.com"
-      : "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("CORS Not Allowed"));
+      }
+    },
     credentials: true,
   })
 );
