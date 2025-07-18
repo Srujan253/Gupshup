@@ -1,15 +1,15 @@
-import {useRef, useState} from 'react';
-import {useChatStore} from '../store/useChatStore.js';
-import { Image, Send, X } from "lucide-react";
+import { useRef, useState } from 'react';
+import { useChatStore } from '../store/useChatStore.js';
+import { Image, Send, X, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from '../store/useAuthStore.js';
+
 function MessageInput() {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
-  const fileInputRef=useRef(null);
-  const {sendMessage}=useChatStore();
-//   const { selectedUser } = useChatStore();
-// const { authUser } = useAuthStore();
+  const [loading, setLoading] = useState(false); // 🆕 loading state
+  const fileInputRef = useRef(null);
+  const { sendMessage } = useChatStore();
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -18,45 +18,43 @@ function MessageInput() {
       return;
     }
 
-    try{
+    try {
+      setLoading(true); // 🆕 Start loading
       await sendMessage({
         text: text.trim(),
         image: imagePreview ? imagePreview : null,
-  //        ReceiverId: selectedUser._id,
-  // SenderId: authUser._id, // Send image if available
       });
       setText("");
       setImagePreview(null);
-      if(fileInputRef.current) fileInputRef.current.value = ""; // Reset the file input
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message");
+    } finally {
+      setLoading(false); // 🆕 Stop loading
     }
   };
 
   const removeImage = () => {
     setImagePreview(null);
-    if(fileInputRef.current) fileInputRef.current.value = ""; // Reset the file input
-  }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if(!file.type.startsWith("image/")) {
+    if (!file.type.startsWith("image/")) {
       toast.error("Please select a valid image file");
+      return;
     }
-    
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    
-  }
-
-  
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
-     <div className="p-4 w-full">
+    <div className="p-4 w-full">
       {imagePreview && (
         <div className="mb-3 flex items-center gap-2">
           <div className="relative">
@@ -67,8 +65,7 @@ function MessageInput() {
             />
             <button
               onClick={removeImage}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300
-              flex items-center justify-center"
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300 flex items-center justify-center"
               type="button"
             >
               <X className="size-3" />
@@ -85,6 +82,7 @@ function MessageInput() {
             placeholder="Type a message..."
             value={text}
             onChange={(e) => setText(e.target.value)}
+            disabled={loading} // 🆕 disable while loading
           />
           <input
             type="file"
@@ -96,23 +94,24 @@ function MessageInput() {
 
           <button
             type="button"
-            className={`hidden sm:flex btn btn-circle
-                     ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
+            className={`hidden sm:flex btn btn-circle ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
             onClick={() => fileInputRef.current?.click()}
+            disabled={loading} // 🆕 disable while loading
           >
             <Image size={20} />
           </button>
         </div>
+
         <button
           type="submit"
           className="btn btn-sm btn-circle"
-          disabled={!text.trim() && !imagePreview}
+          disabled={(!text.trim() && !imagePreview) || loading}
         >
-          <Send size={22} />
+          {loading ? <Loader2 className="animate-spin" size={22} /> : <Send size={22} />}
         </button>
       </form>
     </div>
-  )
+  );
 }
 
-export default MessageInput
+export default MessageInput;
