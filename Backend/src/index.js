@@ -52,7 +52,7 @@ try {
 }
 // Serve Frontend in Production
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+  app.use(express.static(path.join(__dirname, "../Frontend/dist")));
 
   // ✅ Catch-all route for frontend routing (Render-safe version)
   app.get('/{*any}', (req, res) => {
