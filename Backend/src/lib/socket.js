@@ -1,20 +1,31 @@
-// lib/socket.js
 import { Server } from "socket.io";
 
 let io;
 const userSocketMap = {}; // userId -> socket.id
+
 export const initSocket = (server) => {
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "https://gupshup-rbcp.onrender.com",
+  ];
+
   io = new Server(server, {
     cors: {
-      origin: process.env.NODE_ENV === "production"
-        ? "https://gupshup-rbcp.onrender.com"
-        : "http://localhost:5173",
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS: " + origin));
+        }
+      },
       credentials: true,
     },
   });
 
   io.on("connection", (socket) => {
     console.log("🔌 A user connected:", socket.id);
+
     const userId = socket.handshake.query.userId;
     if (userId) {
       userSocketMap[userId] = socket.id;
@@ -23,12 +34,14 @@ export const initSocket = (server) => {
 
     socket.on("disconnect", () => {
       console.log("❌ User disconnected:", socket.id);
+
       for (let [uid, sid] of Object.entries(userSocketMap)) {
         if (sid === socket.id) {
           delete userSocketMap[uid];
           break;
         }
       }
+
       io.emit("getOnlineUsers", Object.keys(userSocketMap));
     });
   });
