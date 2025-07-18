@@ -3,7 +3,10 @@ import { axiosInstance } from '../lib/axios.js';
 import toast from 'react-hot-toast';
 import { io } from 'socket.io-client';
 
-const BASE_URL =import.meta.env.MODE === "development" ? "http://localhost:5001":"/api";
+// ✅ Define WebSocket base URL correctly for dev/prod
+const SOCKET_URL = import.meta.env.MODE === "development"
+  ? "http://localhost:5001"
+  : "https://gupshup-rbcp.onrender.com";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -36,9 +39,7 @@ export const useAuthStore = create((set, get) => ({
       get().connectSocket();
     } catch (error) {
       console.error("Signup failed:", error.response?.data?.message || error.message);
-      toast.error(
-        error.response?.data?.message || "Failed to create account"
-      );
+      toast.error(error.response?.data?.message || "Failed to create account");
     } finally {
       set({ isSigningUp: false });
     }
@@ -50,12 +51,10 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.post("/auth/login", data);
       set({ authUser: res.data });
       toast.success("Logged in successfully");
-      get().connectSocket(); // connect socket
+      get().connectSocket();
     } catch (error) {
       console.error("Login failed:", error.response?.data?.message || error.message);
-      toast.error(
-        error.response?.data?.message || "Failed to login"
-      );
+      toast.error(error.response?.data?.message || "Failed to login");
     } finally {
       set({ isLoggingIn: false });
     }
@@ -91,20 +90,21 @@ export const useAuthStore = create((set, get) => ({
 
     if (!authUser || socket?.connected) return;
 
-    const newSocket = io(BASE_URL, {
+    const newSocket = io(SOCKET_URL, {
+      withCredentials: true, // ✅ Important for cookies
+      transports: ["websocket"], // ✅ Forces WebSocket transport
       query: { userId: authUser._id },
     });
 
-    // Register events before setting the socket in state
     newSocket.on("connect", () => {
-      console.log("Connected to socket:", newSocket.id);
+      console.log("✅ Connected to socket:", newSocket.id);
     });
 
     newSocket.on("getOnlineUsers", (userIDs) => {
       set({ onlineUsers: userIDs });
     });
 
-    // Add more listeners here as needed...
+    // Add more events here as needed...
 
     set({ socket: newSocket });
   },
