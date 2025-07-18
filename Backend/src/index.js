@@ -4,12 +4,15 @@ import http from "http";
 import path from "path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import helmet from "helmet";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
-import { initSocket } from "./lib/socket.js";
+import { initSocket } from "./lib/socket.js"; 
+import helmet from "helmet";
+
+
+// 👈 new
 
 dotenv.config();
 
@@ -19,7 +22,6 @@ const __dirname = path.resolve();
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Helmet CSP Middleware
 app.use(
   helmet.contentSecurityPolicy({
     directives: {
@@ -38,34 +40,47 @@ app.use(
   })
 );
 
-// ✅ Middleware
+// Middleware
 app.use(express.json({ limit: "10mb" }));
+// app.use((req, res, next) => {
+//   res.setHeader(
+//     "Content-Security-Policy",
+//     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' data:; img-src 'self' data:; connect-src *"
+//   );
+//   next();
+// });
 app.use(cookieParser());
-
-// ✅ CORS config
 const allowedOrigins = [
-  "http://localhost:5173",
-  "https://gupshup-rbcp.onrender.com",
+  "http://localhost:5173",                  // Local dev
+  "https://gupshup-rbcp.onrender.com",      // Production frontend
 ];
+
+
+
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        return callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
   })
 );
 
-// ✅ Routes
+
+
+
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-// 🔍 Debug Registered Routes
+// Debug Registered Routes
 try {
   console.log("\n🔍 Registered Routes:");
   app._router?.stack?.forEach((middleware) => {
@@ -83,20 +98,21 @@ try {
 } catch (err) {
   console.error("Route logging failed safely:", err.message);
 }
-
-// ✅ Serve frontend in production
+// Serve Frontend in Production
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../Frontend/dist")));
 
-  app.get("/*", (req, res) => {
+  // ✅ Catch-all route for frontend routing (Render-safe version)
+  app.get('/{*any}', (req, res) => {
     res.sendFile(path.join(__dirname, "../Frontend", "dist", "index.html"));
   });
 }
 
-// ✅ Initialize Socket.IO
+
+// Init socket.io
 initSocket(server);
 
-// ✅ Start server
+// Start server
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on PORT: ${PORT}`);
   connectDB();
