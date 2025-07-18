@@ -1,33 +1,24 @@
 import express from "express";
 import dotenv from "dotenv";
 import http from "http";
+import path from "path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import path from "path";
-import { Server } from "socket.io";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
+import { initSocket } from "./lib/socket.js"; // 👈 new
 
 dotenv.config();
 
 const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
-// 🔧 Create Express App and HTTP Server
 const app = express();
 const server = http.createServer(app);
 
-// 🌐 Setup Socket.io
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:5173"],
-    credentials: true,
-  },
-});
-
-// 🔐 Middlewares
+// Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 app.use(
@@ -37,14 +28,14 @@ app.use(
   })
 );
 
-// 🧩 Routes
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-// ✅ Route Debugger
+// Debug Registered Routes
 console.log("\n🔍 Registered Routes:");
 try {
-  app._router?.stack?.forEach((middleware) => {
+  app._router.stack.forEach((middleware) => {
     if (middleware.route) {
       console.log("Route:", middleware.route.path);
     } else if (middleware.name === "router") {
@@ -59,7 +50,7 @@ try {
   console.error("Route logging failed:", err.message);
 }
 
-// 🚀 Production static file serving
+// Serve Frontend in Production
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
   app.get("*", (req, res) => {
@@ -67,39 +58,11 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-// 🔌 Socket.io Connection
-const userSocketMap = {}; // userId -> socket.id
+// Init socket.io
+initSocket(server);
 
-io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
-  const userId = socket.handshake.query.userId;
-
-  if (userId) {
-    userSocketMap[userId] = socket.id;
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
-  }
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-    for (const [uid, sid] of Object.entries(userSocketMap)) {
-      if (sid === socket.id) {
-        delete userSocketMap[uid];
-        break;
-      }
-    }
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
-  });
-});
-
-// 📤 Helper to get socketId by userId
-export function getReceiverSocketId(userId) {
-  return userSocketMap[userId] || null;
-}
-
-// 📦 Start Server
+// Start server
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on PORT: ${PORT}`);
   connectDB();
 });
-
-export { io };

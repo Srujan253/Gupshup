@@ -1,7 +1,9 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import cloudinary from "../lib/cloudinary.js";
-import { io,getReceiverSocketId } from "../index.js";
+import { getIO, getReceiverSocketId } from "../lib/socket.js";
+
+// 📌 Get users except the current one
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggenInUserId = req.user._id;
@@ -16,16 +18,19 @@ export const getUsersForSidebar = async (req, res) => {
   }
 };
 
+// 📌 Get chat messages between two users
 export const getMessages = async (req, res) => {
   try {
     const { id: userToChatId } = req.params;
     const myId = req.user._id;
+
     const message = await Message.find({
       $or: [
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
     });
+
     res.status(200).json(message);
   } catch (error) {
     console.error("Error in GetMessages", error.message);
@@ -33,6 +38,7 @@ export const getMessages = async (req, res) => {
   }
 };
 
+// 📌 Send a new message and notify receiver via socket
 export const sendMessages = async (req, res) => {
   try {
     const { text, image } = req.body;
@@ -42,7 +48,6 @@ export const sendMessages = async (req, res) => {
     let imageUrl;
 
     if (image) {
-      // Upload image to Cloudinary
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
     }
@@ -55,9 +60,11 @@ export const sendMessages = async (req, res) => {
     });
 
     await newMessage.save();
-    // real time functionality using socket.io
-const receiverSocketId = getReceiverSocketId(receiverId);
-if(receiverSocketId) {
+
+    // ✅ Emit real-time message if receiver is online
+    const io = getIO();
+    const receiverSocketId = getReceiverSocketId(receiverId);
+    if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
     }
 
