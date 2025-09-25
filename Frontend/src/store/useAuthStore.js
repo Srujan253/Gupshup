@@ -86,9 +86,9 @@ export const useAuthStore = create((set, get) => ({
   },
 
   connectSocket: () => {
-    const { authUser, socket } = get();
+    const { authUser, socket: currentSocket } = get();
 
-    if (!authUser || socket?.connected) return;
+    if (!authUser || currentSocket?.connected) return;
 
     const newSocket = io(SOCKET_URL, {
       withCredentials: true, // ✅ Important for cookies
@@ -110,9 +110,9 @@ export const useAuthStore = create((set, get) => ({
   },
 
   disconnectSocket: () => {
-    const socket = get().socket;
-    if (socket?.connected) {
-      socket.disconnect();
+    const { socket: currentSocket } = get();
+    if (currentSocket?.connected) {
+      currentSocket.disconnect();
       set({ socket: null });
     }
   },

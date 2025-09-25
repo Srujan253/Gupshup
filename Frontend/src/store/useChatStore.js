@@ -23,6 +23,12 @@ export const useChatStore = create((set,get) => ({
          }
     },
     getMessages: async (userId) => {
+        // Skip backend call for GupShup AI - it's frontend only
+        if (userId === 'gupshup-ai') {
+            set({ messages: [], isMessagesLoading: false });
+            return;
+        }
+        
         set({ isMessagesLoading: true });
         try {
             const res = await axiosInstance.get(`/messages/${userId}`);
@@ -41,6 +47,13 @@ export const useChatStore = create((set,get) => ({
             toast.error('No user selected');
             return;
         }
+        
+        // Skip backend call for GupShup AI - it's frontend only
+        if (selectedUser._id === 'gupshup-ai') {
+            // GupShup AI messages are handled in useGeminiStore, not here
+            return;
+        }
+        
         try {
             const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
             set({ messages: [...messages, res.data] });
@@ -49,8 +62,6 @@ export const useChatStore = create((set,get) => ({
             console.error('Error sending message:', error);
             toast.error('Failed to send message');
         }
-
-
     },
 
 subscribeToMessages:()=>{
@@ -59,6 +70,12 @@ subscribeToMessages:()=>{
         // console.error('No user selected for message subscription');
         return;
     }
+    
+    // Skip socket subscription for GupShup AI - it's frontend only
+    if (selectedUser._id === 'gupshup-ai') {
+        return;
+    }
+    
     const socket=useAuthStore.getState().socket;
 
    socket.on("newMessage" , (newMessage) => {

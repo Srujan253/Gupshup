@@ -3,9 +3,12 @@ import { useChatStore } from "../store/useChatStore";
 import Sidebar from "../components/Sidebar";
 import NoChatSelected from "../components/NoChatSelected.jsx";
 import ChatContainer from "../components/chatContainer.jsx";
+import GeminiChatPage from "./GeminiChatPage.jsx";
 
 const HomePage = () => {
   const { selectedUser } = useChatStore();
+
+  const isGeminiChat = selectedUser?._id === 'gupshup-ai';
 
   return (
     <div className="h-screen bg-base-200">
@@ -14,7 +17,13 @@ const HomePage = () => {
           <div className="flex h-full rounded-lg overflow-hidden">
             <Sidebar />
 
-            {!selectedUser ? <NoChatSelected /> : <ChatContainer />}
+            {!selectedUser ? (
+              <NoChatSelected />
+            ) : isGeminiChat ? (
+              <GeminiChatPage />
+            ) : (
+              <ChatContainer />
+            )}
           </div>
         </div>
       </div>

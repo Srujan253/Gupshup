@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useGeminiStore } from "../store/useGeminiStore";
 import SidebarSkeleton from "./Skeltons/Sidebarskeleton.jsx";
-import { Users } from "lucide-react";
+import { Users, Sparkles } from "lucide-react";
 
 const Sidebar = () => {
   const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
+  const { geminiUser } = useGeminiStore();
 
   const { onlineUsers = [] } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
@@ -42,6 +44,41 @@ const Sidebar = () => {
       </div>
 
       <div className="overflow-y-auto w-full py-3">
+        {/* GupShup AI Chat Option */}
+        <button
+          onClick={() => setSelectedUser(geminiUser)}
+          className={`
+            w-full p-3 flex items-center gap-3
+            hover:bg-base-300 transition-colors
+            ${selectedUser?._id === geminiUser._id ? "bg-base-300 ring-1 ring-base-300" : ""}
+          `}
+        >
+          <div className="relative mx-auto lg:mx-0">
+            <div className="size-12 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
+              <Sparkles className="size-6 text-white" />
+            </div>
+            <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900" />
+          </div>
+
+          {/* GupShup AI info - only visible on larger screens */}
+          <div className="hidden lg:block text-left min-w-0">
+            <div className="font-medium truncate flex items-center gap-2">
+              {geminiUser.fullname}
+              <span className="text-xs bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded-full">
+                AI
+              </span>
+            </div>
+            <div className="text-sm text-green-500">Always Online</div>
+          </div>
+        </button>
+
+        {/* Separator */}
+        {users.length > 0 && (
+          <div className="border-b border-base-300 my-2 mx-3">
+            <div className="text-xs text-base-content/50 pb-2 hidden lg:block">Users</div>
+          </div>
+        )}
+
         {filteredUsers.map((user) => (
           <button
             key={user._id}

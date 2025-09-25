@@ -1,0 +1,135 @@
+{
+  "project": {
+    "name": "GupShup",
+    "type": "Real-time Chat Application",
+    "description": "A secure, full-stack real-time chat application with AI integration",
+    "purpose": "Academic final project demonstrating secure full-stack development practices",
+    "status": "Active Development",
+    "repository": "whispr"
+  },
+  "academic": {
+    "course": "Secure Full Stack Development",
+    "branch": "Cyber Security",
+    "institution": "College Project",
+    "team_size": 3,
+    "project_type": "Final Project"
+  },
+  "team": {
+    "leader": "Srujan H M",
+    "members": [
+      "Srujan H M",
+      "S K Thilak Raj",
+      "Balaji V Kodle"
+    ]
+  },
+  "technology_stack": {
+    "frontend": {
+      "framework": "React.js",
+      "build_tool": "Vite",
+      "ui_framework": "Tailwind CSS + DaisyUI",
+      "state_management": "Zustand",
+      "routing": "React Router",
+      "real_time": "Socket.io Client"
+    },
+    "backend": {
+      "runtime": "Node.js",
+      "framework": "Express.js",
+      "database": "MongoDB",
+      "orm": "Mongoose",
+      "authentication": "JWT",
+      "real_time": "Socket.io",
+      "file_storage": "Cloudinary"
+    },
+    "ai_integration": {
+      "provider": "Google Generative AI",
+      "model": "Gemini",
+      "branding": "GupShup AI",
+      "features": ["Text Chat", "Image Analysis"]
+    }
+  },
+  "security_features": {
+    "password_encryption": "bcryptjs",
+    "authentication": "JWT with secure cookies",
+    "cors_protection": true,
+    "input_validation": "Server-side validation",
+    "file_upload_security": "Cloudinary validation",
+    "environment_security": "Environment variables"
+  },
+  "features": {
+    "core": [
+      "Real-time messaging",
+      "User authentication",
+      "Profile management",
+      "Image sharing",
+      "Online/offline status",
+      "Message history"
+    ],
+    "ai_features": [
+      "AI chat assistant",
+      "Image analysis",
+      "Conversational AI",
+      "Custom AI branding"
+    ],
+    "ui_features": [
+      "Responsive design",
+      "Dark/light themes",
+      "Mobile-friendly interface",
+      "Modern UI components"
+    ]
+  },
+  "database_models": {
+    "User": {
+      "fields": ["fullname", "email", "password", "profilePic", "timestamps"],
+      "security": "Password encrypted, unique email validation"
+    },
+    "Message": {
+      "fields": ["senderId", "receiverId", "text", "image", "timestamps"],
+      "relations": "References User model"
+    }
+  },
+  "development": {
+    "environment": "Node.js with npm",
+    "code_quality": "ESLint",
+    "version_control": "Git + GitHub",
+    "package_manager": "npm",
+    "deployment": "Development phase"
+  },
+  "project_context": {
+    "learning_objectives": [
+      "Secure full-stack development",
+      "Real-time communication",
+      "Modern authentication",
+      "AI integration",
+      "Database security",
+      "Cloud services integration"
+    ],
+    "demonstrates": [
+      "MERN stack proficiency",
+      "Security best practices",
+      "Real-time WebSocket communication",
+      "Third-party API integration",
+      "Modern UI/UX design",
+      "State management patterns"
+    ]
+  },
+  "ai_assistant_context": {
+    "role": "Development assistant for GupShup chat application",
+    "knowledge_scope": [
+      "React.js and modern frontend development",
+      "Node.js backend development",
+      "MongoDB database operations",
+      "Socket.io real-time features",
+      "Security best practices",
+      "AI integration patterns",
+      "UI/UX design principles"
+    ],
+    "help_with": [
+      "Code debugging and optimization",
+      "Security implementation guidance",
+      "Feature development suggestions",
+      "Best practices recommendations",
+      "Documentation assistance",
+      "Testing strategies"
+    ]
+  }
+}
