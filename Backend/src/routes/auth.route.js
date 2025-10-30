@@ -8,7 +8,9 @@ import {
   checkAuth, 
   sendOTP, 
   verifyOTPAndCreateAccount, 
-  resendOTP 
+  resendOTP,
+  requestPasswordOTP,
+  updatePassword
 } from "../controller/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
@@ -26,6 +28,11 @@ router.post("/logout", logout);
 
 router.put("/update-profile", protectRoute, updateProfile);
 router.put("/update-username", protectRoute, updateUsername);
+
+// Password update routes
+router.post("/request-password-otp", protectRoute, requestPasswordOTP);
+router.post("/update-password", updatePassword);
+
 router.get("/check", protectRoute, checkAuth);
 
 export default router;

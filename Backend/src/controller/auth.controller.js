@@ -38,7 +38,7 @@ const generateOTP = () => {
 };
 
 // Send OTP email
-const sendOTPEmail = async (email, otp, fullName) => {
+const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') => {
   try {
     console.log(`📧 Attempting to send email to: ${email}`);
     console.log(`📧 Using email config - User: ${process.env.EMAIL_USER}`);
@@ -576,5 +576,140 @@ export const checkAuth = (req, res) => {
   } catch (error) {
     console.error("Error during authentication check:", error.message);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Request OTP for password change
+export const requestPasswordOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email is required" 
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Store OTP with password change identifier
+    otpStorage.set(`password_${email}`, {
+      otp,
+      expiry: otpExpiry,
+      email,
+      userId: user._id
+    });
+
+    console.log(`🔐 Password change OTP generated for ${email}: ${otp}`);
+
+    // Send OTP email
+    await sendOTPEmail(email, otp, user.fullname, 'password_change');
+
+    res.status(200).json({
+      success: true,
+      message: "Password change OTP sent to your email"
+    });
+
+  } catch (error) {
+    console.error("Error requesting password OTP:", error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to send OTP. Please try again." 
+    });
+  }
+};
+
+// Verify OTP and update password
+export const updatePassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email, OTP, and new password are required" 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Password must be at least 6 characters long" 
+      });
+    }
+
+    // Get stored OTP data
+    const otpData = otpStorage.get(`password_${email}`);
+    
+    if (!otpData) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid or expired OTP. Please request a new one." 
+      });
+    }
+
+    // Check if OTP has expired
+    if (Date.now() > otpData.expiry) {
+      otpStorage.delete(`password_${email}`);
+      return res.status(400).json({ 
+        success: false, 
+        message: "OTP has expired. Please request a new one." 
+      });
+    }
+
+    // Verify OTP
+    if (otpData.otp !== otp) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid OTP. Please check and try again." 
+      });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update user password
+    const updatedUser = await User.findByIdAndUpdate(
+      otpData.userId,
+      { password: hashedPassword },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    // Clean up OTP data
+    otpStorage.delete(`password_${email}`);
+
+    console.log(`✅ Password updated successfully for user: ${email}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Password updated successfully"
+    });
+
+  } catch (error) {
+    console.error("Error updating password:", error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to update password. Please try again." 
+    });
   }
 };
