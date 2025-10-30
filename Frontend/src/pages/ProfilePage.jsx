@@ -4,6 +4,7 @@ import { Camera, Mail, User, Edit3, Check, X, ArrowLeft, Lock, Shield } from "lu
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { apiCall } from "../lib/api.js";
+import PasswordStrengthIndicator from "../components/PasswordStrengthIndicator.jsx";
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile, updateUsername } = useAuthStore();
@@ -91,8 +92,19 @@ const ProfilePage = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+
+    // Check for basic password requirements
+    const hasLower = /[a-z]/.test(newPassword);
+    const hasUpper = /[A-Z]/.test(newPassword);
+    const hasNumber = /\d/.test(newPassword);
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
+
+    if (!hasLower || !hasUpper || !hasNumber) {
+      toast.error("Password must contain lowercase, uppercase, and number");
       return;
     }
 
@@ -352,6 +364,13 @@ const ProfilePage = () => {
                     className="input input-bordered w-full"
                     disabled={isLoading}
                   />
+                  
+                  {/* Password Strength Indicator */}
+                  {newPassword && (
+                    <div className="mt-3 p-3 bg-base-200 rounded-lg">
+                      <PasswordStrengthIndicator password={newPassword} />
+                    </div>
+                  )}
                 </div>
 
                 <div>

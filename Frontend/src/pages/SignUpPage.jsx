@@ -12,6 +12,7 @@ import {
 import { Link } from "react-router-dom";
 import AuthImagePattern from "../components/AuthImagePattern.jsx";
 import OTPVerification from "../components/OTPVerification.jsx";
+import PasswordStrengthIndicator from "../components/PasswordStrengthIndicator.jsx";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 
@@ -39,7 +40,16 @@ const SignUpPage = () => {
     if (!formData.email.trim()) return toast.error("Email is required");
     if (!/\S+@\S+\.\S+/.test(formData.email)) return toast.error("Invalid email format");
     if (!formData.password) return toast.error("Password is required");
-    if (formData.password.length < 6) return toast.error("Password must be at least 6 characters");
+    if (formData.password.length < 8) return toast.error("Password must be at least 8 characters");
+
+    // Check for basic password requirements
+    const hasLower = /[a-z]/.test(formData.password);
+    const hasUpper = /[A-Z]/.test(formData.password);
+    const hasNumber = /\d/.test(formData.password);
+
+    if (!hasLower || !hasUpper || !hasNumber) {
+      return toast.error("Password must contain lowercase, uppercase, and number");
+    }
 
     return true;
   };
@@ -196,6 +206,19 @@ const SignUpPage = () => {
                       )}
                     </button>
                   </div>
+                  
+                  {/* Password Strength Indicator */}
+                  {formData.password && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="mt-3 p-3 bg-base-200 rounded-lg"
+                    >
+                      <PasswordStrengthIndicator password={formData.password} />
+                    </motion.div>
+                  )}
                 </motion.div>
 
                 {/* Create Account Button */}
