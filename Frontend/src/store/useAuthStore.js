@@ -16,6 +16,10 @@ export const useAuthStore = create((set, get) => ({
   isCheckingAuth: true,
   onlineUsers: [],
   socket: null,
+  // OTP related states
+  pendingUser: null, // Store user data during OTP verification
+  isVerifyingOTP: false,
+  isSendingOTP: false,
 
   checkAuth: async () => {
     try {
@@ -33,15 +37,66 @@ export const useAuthStore = create((set, get) => ({
   signup: async (data) => {
     set({ isSigningUp: true });
     try {
-      const res = await axiosInstance.post("/auth/signup", data);
-      set({ authUser: res.data });
-      toast.success("Account created successfully");
-      get().connectSocket();
+      // Send OTP instead of creating account immediately
+      const res = await axiosInstance.post("/auth/send-otp", data);
+      set({ pendingUser: data });
+      toast.success("OTP sent to your email");
+      return { success: true, message: "OTP sent successfully" };
     } catch (error) {
-      console.error("Signup failed:", error.response?.data?.message || error.message);
-      toast.error(error.response?.data?.message || "Failed to create account");
+      console.error("Send OTP failed:", error.response?.data?.message || error.message);
+      toast.error(error.response?.data?.message || "Failed to send OTP");
+      return { success: false };
     } finally {
       set({ isSigningUp: false });
+    }
+  },
+
+  verifyOTPAndCreateAccount: async (otp) => {
+    set({ isVerifyingOTP: true });
+    try {
+      const { pendingUser } = get();
+      if (!pendingUser) {
+        throw new Error("No pending user data found");
+      }
+
+      const res = await axiosInstance.post("/auth/verify-otp", {
+        ...pendingUser,
+        otp
+      });
+      
+      set({ 
+        authUser: res.data, 
+        pendingUser: null 
+      });
+      toast.success("Account created successfully");
+      get().connectSocket();
+      return { success: true };
+    } catch (error) {
+      console.error("OTP verification failed:", error.response?.data?.message || error.message);
+      toast.error(error.response?.data?.message || "Invalid OTP");
+      return { success: false };
+    } finally {
+      set({ isVerifyingOTP: false });
+    }
+  },
+
+  resendOTP: async () => {
+    set({ isSendingOTP: true });
+    try {
+      const { pendingUser } = get();
+      if (!pendingUser) {
+        throw new Error("No pending user data found");
+      }
+
+      await axiosInstance.post("/auth/resend-otp", {
+        email: pendingUser.email
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Resend OTP failed:", error.response?.data?.message || error.message);
+      throw error;
+    } finally {
+      set({ isSendingOTP: false });
     }
   },
 
@@ -80,6 +135,20 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       console.error("Error in update profile:", error);
       toast.error(error.response?.data?.message || "Failed to update profile");
+    } finally {
+      set({ isUpdatingProfile: false });
+    }
+  },
+
+  updateUsername: async (newUsername) => {
+    set({ isUpdatingProfile: true });
+    try {
+      const res = await axiosInstance.put("/auth/update-username", { fullname: newUsername });
+      set({ authUser: res.data });
+      toast.success("Username updated successfully");
+    } catch (error) {
+      console.error("Error updating username:", error);
+      toast.error(error.response?.data?.message || "Failed to update username");
     } finally {
       set({ isUpdatingProfile: false });
     }

@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { Camera, Mail, User } from "lucide-react";
+import { Camera, Mail, User, Edit3, Check, X, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const ProfilePage = () => {
-  const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
+  const { authUser, isUpdatingProfile, updateProfile, updateUsername } = useAuthStore();
   const [selectedImg, setSelectedImg] = useState(null);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState(authUser?.fullname || "");
+  const navigate = useNavigate();
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -21,12 +25,43 @@ const ProfilePage = () => {
     };
   };
 
+  const handleUsernameUpdate = async () => {
+    if (!newUsername.trim()) {
+      return;
+    }
+    if (newUsername.trim() === authUser?.fullname) {
+      setIsEditingUsername(false);
+      return;
+    }
+    
+    await updateUsername(newUsername.trim());
+    setIsEditingUsername(false);
+  };
+
+  const cancelUsernameEdit = () => {
+    setNewUsername(authUser?.fullname || "");
+    setIsEditingUsername(false);
+  };
+
+  const handleGoBack = () => {
+    navigate("/");
+  };
+
   return (
     <div className="h-screen pt-20">
       <div className="max-w-2xl mx-auto p-4 py-8">
         <div className="bg-base-300 rounded-xl p-6 space-y-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold ">Profile</h1>
+          <div className="text-center relative">
+            {/* Back Arrow */}
+            <button
+              onClick={handleGoBack}
+              className="absolute left-0 top-0 btn btn-ghost btn-sm"
+              title="Back to Messages"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            
+            <h1 className="text-2xl font-semibold">Profile</h1>
             <p className="mt-2">Your profile information</p>
           </div>
 
@@ -71,7 +106,54 @@ const ProfilePage = () => {
                 <User className="w-4 h-4" />
                 Full Name
               </div>
-              <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.fullname}</p>
+              {isEditingUsername ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    className="flex-1 px-4 py-2.5 bg-base-200 rounded-lg border focus:outline-none focus:border-primary"
+                    placeholder="Enter your name"
+                    disabled={isUpdatingProfile}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleUsernameUpdate();
+                      if (e.key === 'Escape') cancelUsernameEdit();
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleUsernameUpdate}
+                    disabled={isUpdatingProfile || !newUsername.trim()}
+                    className="btn btn-sm btn-primary"
+                  >
+                    {isUpdatingProfile ? (
+                      <div className="loading loading-spinner loading-xs"></div>
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={cancelUsernameEdit}
+                    disabled={isUpdatingProfile}
+                    className="btn btn-sm btn-ghost"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="flex-1 px-4 py-2.5 bg-base-200 rounded-lg border">
+                    {authUser?.fullname}
+                  </p>
+                  <button
+                    onClick={() => setIsEditingUsername(true)}
+                    className="btn btn-sm btn-ghost"
+                    disabled={isUpdatingProfile}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
