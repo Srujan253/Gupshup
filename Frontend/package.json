@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@tailwindcss/vite": "^4.1.11",
     "axios": "^1.10.0",
     "crypto": "^1.0.1",

@@ -1,18 +1,41 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useGeminiStore } from '../store/useGeminiStore.js';
-import { Image, Send, X, Sparkles } from "lucide-react";
+import { Image, Send, X, Sparkles, Clock } from "lucide-react";
 import toast from "react-hot-toast";
+import { canMakeRequest } from '../lib/gemini.js';
 
 function GeminiMessageInput() {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [waitTime, setWaitTime] = useState(0);
   const fileInputRef = useRef(null);
   const { sendMessageToGemini, isGeminiLoading } = useGeminiStore();
+
+  // Check rate limits every second
+  useEffect(() => {
+    const checkRateLimit = () => {
+      const rateLimitCheck = canMakeRequest();
+      setIsRateLimited(!rateLimitCheck.canRequest);
+      setWaitTime(rateLimitCheck.waitTime || 0);
+    };
+
+    checkRateLimit();
+    const interval = setInterval(checkRateLimit, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) {
       toast.error("Please enter a message or select an image");
+      return;
+    }
+
+    // Check rate limit before sending
+    const rateLimitCheck = canMakeRequest();
+    if (!rateLimitCheck.canRequest) {
+      toast.error(`Please wait ${rateLimitCheck.waitTime} seconds before sending another message`);
       return;
     }
 
@@ -23,7 +46,19 @@ function GeminiMessageInput() {
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
       console.error("Error sending message to GupShup AI:", error);
-      toast.error("Failed to send message to GupShup AI");
+      
+      if (error.message.includes("Rate limit") || error.message.includes("wait") || error.message.includes("seconds")) {
+        setIsRateLimited(true);
+        toast.error(error.message);
+        // Reset after the wait time
+        setTimeout(() => setIsRateLimited(false), (waitTime || 10) * 1000);
+      } else if (error.message.includes("Credit limit")) {
+        toast.error("API usage limit reached. Please try again later.");
+      } else if (error.message.includes("Network error")) {
+        toast.error("Network error. Please check your connection.");
+      } else {
+        toast.error(error.message || "Failed to send message. Please try again.");
+      }
     }
   };
 
@@ -103,11 +138,15 @@ function GeminiMessageInput() {
         </div>
         <button
           type="submit"
-          className="btn btn-sm btn-circle btn-primary bg-gradient-to-r from-purple-600 to-blue-600 border-none"
-          disabled={(!text.trim() && !imagePreview) || isGeminiLoading}
+          className={`btn btn-sm btn-circle btn-primary bg-gradient-to-r from-purple-600 to-blue-600 border-none ${
+            isRateLimited ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+          disabled={(!text.trim() && !imagePreview) || isGeminiLoading || isRateLimited}
         >
           {isGeminiLoading ? (
             <Sparkles className="size-5 animate-spin" />
+          ) : isRateLimited ? (
+            <Clock className="size-4" />
           ) : (
             <Send size={16} />
           )}
@@ -115,7 +154,13 @@ function GeminiMessageInput() {
       </form>
       
       <div className="text-xs text-base-content/50 mt-2 text-center">
-        Powered by GupShup AI • Can analyze images and answer questions
+        {isRateLimited ? (
+          <span className="text-warning">
+            ⏱️ Rate limited - Please wait {waitTime} second{waitTime !== 1 ? 's' : ''} before sending another message
+          </span>
+        ) : (
+          "Powered by GupShup AI • Can analyze images and answer questions"
+        )}
       </div>
     </div>
   );
