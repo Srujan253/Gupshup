@@ -10,7 +10,8 @@ import {
   verifyOTPAndCreateAccount, 
   resendOTP,
   requestPasswordOTP,
-  updatePassword
+  updatePassword,
+  testEmailConfig
 } from "../controller/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
@@ -32,6 +33,9 @@ router.put("/update-username", protectRoute, updateUsername);
 // Password update routes
 router.post("/request-password-otp", protectRoute, requestPasswordOTP);
 router.post("/update-password", updatePassword);
+
+// Test endpoint for debugging email issues
+router.get("/test-email", testEmailConfig);
 
 router.get("/check", protectRoute, checkAuth);
 

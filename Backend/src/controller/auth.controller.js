@@ -12,9 +12,15 @@ const otpStorage = new Map();
 const createEmailTransporter = () => {
   try {
     console.log(`🔐 Email credentials check:`);
+    console.log(`   NODE_ENV: ${process.env.NODE_ENV}`);
     console.log(`   User: ${process.env.EMAIL_USER}`);
     console.log(`   Pass length: ${process.env.EMAIL_PASS?.length} characters`);
     console.log(`   Pass first 4 chars: ${process.env.EMAIL_PASS?.substring(0, 4)}****`);
+    console.log(`   Service: ${process.env.EMAIL_SERVICE || 'gmail'}`);
+    
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      throw new Error(`Missing email credentials - USER: ${!!process.env.EMAIL_USER}, PASS: ${!!process.env.EMAIL_PASS}`);
+    }
     
     // Fix: Use nodemailer.createTransporter (correct method name)
     return nodemailer.createTransport({
@@ -23,8 +29,8 @@ const createEmailTransporter = () => {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS, // App password from Google
       },
-      debug: true, // Enable debug mode
-      logger: true // Enable logging
+      debug: process.env.NODE_ENV === 'development', // Enable debug mode only in development
+      logger: process.env.NODE_ENV === 'development' // Enable logging only in development
     });
   } catch (error) {
     console.error("❌ Error creating email transporter:", error);
@@ -181,8 +187,25 @@ const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') =>
     
     return result;
   } catch (error) {
-    console.error(`❌ Email sending failed:`, error);
-    throw new Error(`Email sending failed: ${error.message}`);
+    console.error(`❌ Email sending failed:`, {
+      error: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+    
+    // Provide more specific error messages
+    if (error.code === 'EAUTH') {
+      throw new Error(`Gmail authentication failed. Check email credentials.`);
+    } else if (error.code === 'ECONNECTION') {
+      throw new Error(`Unable to connect to Gmail servers. Check internet connection.`);
+    } else if (error.responseCode === 535) {
+      throw new Error(`Gmail login failed. App password may be incorrect.`);
+    } else {
+      throw new Error(`Email sending failed: ${error.message}`);
+    }
   }
 };
 
@@ -623,10 +646,24 @@ export const requestPasswordOTP = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error requesting password OTP:", error.message);
+    console.error("Error requesting password OTP:", {
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      email: email,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Provide specific error messages based on error type
+    let errorMessage = "Failed to send OTP. Please try again.";
+    if (error.message.includes('authentication') || error.message.includes('credentials')) {
+      errorMessage = "Email service configuration error. Please contact support.";
+    } else if (error.message.includes('connection') || error.message.includes('network')) {
+      errorMessage = "Network error. Please check your connection and try again.";
+    }
+    
     res.status(500).json({ 
       success: false, 
-      message: "Failed to send OTP. Please try again." 
+      message: errorMessage
     });
   }
 };
@@ -710,6 +747,55 @@ export const updatePassword = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: "Failed to update password. Please try again." 
+    });
+  }
+};
+
+// Test email configuration endpoint (for debugging)
+export const testEmailConfig = async (req, res) => {
+  try {
+    console.log("🧪 Testing email configuration...");
+    
+    // Check environment variables
+    const emailConfig = {
+      hasUser: !!process.env.EMAIL_USER,
+      hasPass: !!process.env.EMAIL_PASS,
+      userValue: process.env.EMAIL_USER,
+      passLength: process.env.EMAIL_PASS?.length,
+      nodeEnv: process.env.NODE_ENV
+    };
+    
+    console.log("📧 Email config check:", emailConfig);
+    
+    // Try to create transporter
+    const transporter = createEmailTransporter();
+    
+    // Verify connection
+    await transporter.verify();
+    
+    console.log("✅ Email configuration test passed");
+    
+    res.status(200).json({
+      success: true,
+      message: "Email configuration is working",
+      config: {
+        hasCredentials: emailConfig.hasUser && emailConfig.hasPass,
+        environment: emailConfig.nodeEnv
+      }
+    });
+    
+  } catch (error) {
+    console.error("❌ Email configuration test failed:", error);
+    
+    res.status(500).json({
+      success: false,
+      message: "Email configuration test failed",
+      error: error.message,
+      details: {
+        hasUser: !!process.env.EMAIL_USER,
+        hasPass: !!process.env.EMAIL_PASS,
+        environment: process.env.NODE_ENV
+      }
     });
   }
 };

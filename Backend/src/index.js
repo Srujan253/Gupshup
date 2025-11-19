@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
+import geminiRoutes from "./routes/gemini.route.js";
 import { connectDB } from "./lib/db.js";
 import { initSocket } from "./lib/socket.js"; 
 import helmet from "helmet";
@@ -79,6 +80,7 @@ app.use(
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/gemini", geminiRoutes);
 
 // Debug Registered Routes
 try {

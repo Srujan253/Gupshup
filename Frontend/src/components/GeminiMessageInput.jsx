@@ -155,8 +155,9 @@ function GeminiMessageInput() {
       
       <div className="text-xs text-base-content/50 mt-2 text-center">
         {isRateLimited ? (
-          <span className="text-warning">
-            ⏱️ Rate limited - Please wait {waitTime} second{waitTime !== 1 ? 's' : ''} before sending another message
+          <span className="text-warning flex items-center justify-center gap-1">
+            <Clock className="size-3" />
+            Rate limited - Please wait {waitTime} second{waitTime !== 1 ? 's' : ''} (Gemini free tier has strict limits)
           </span>
         ) : (
           "Powered by GupShup AI • Can analyze images and answer questions"
