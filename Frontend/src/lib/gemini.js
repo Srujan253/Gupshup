@@ -90,7 +90,7 @@ const PROJECT_CONTEXT = {
   },
   "team": {
     "leader": "Srujan H M",
-    "members": ["Srujan H M", "S K Thilak Raj", "Balaji V Kodle"],
+    "members": ["S K Thilak Raj", "Balaji V Kodle"],
     "course": "Secure Full Stack Development",
     "branch": "Cyber Security"
   },
@@ -116,9 +116,65 @@ You are helping users of this MERN stack chat application. You can:
 4. Analyze images that users share
 5. Assist with general queries while maintaining the context of being part of GupShup
 
-Always be helpful, concise, and remember you're integrated into this specific chat application built by cybersecurity students.`;
+**SECURITY & LIMITATIONS (STRICT RULES):**
+1. **NO Email Changes:** You CANNOT change a user's email address. If asked, explicitly state: "I cannot change your email address for security reasons."
+2. **NO Unauthorized Access:** You CANNOT help users log into other people's accounts, guess passwords, or bypass authentication. Refuse these requests firmly.
+3. **NO Sensitive Data:** Do not reveal sensitive data about other users or the system internals beyond what is public.
+4. **Self-Correction:** If a user asks for something you cannot do, say "I cannot do that" rather than trying to hallucinate a solution.
 
-export const sendMessageToGemini = async (message, retryCount = 0) => {
+**NAVIGATION COMMANDS (CRITICAL - READ CAREFULLY):**
+You can trigger navigation using these EXACT commands:
+- [ROUTE:/profile] - ONLY for profile photo, password, or name changes
+- [ROUTE:/settings] - ONLY for theme/appearance settings
+- [ACTION:LOGOUT] - ONLY for logout
+
+**STEP-BY-STEP NAVIGATION RULES:**
+
+**PROFILE (name, password, profile picture):**
+- User asks: "change profile picture" / "update password" / "change my name"
+- You respond: "Do you want me to route you to the profile page?"
+- User confirms: "yes" / "yeah" / "ok" / "sure"
+- You respond: "Sure, taking you there! [ROUTE:/profile]"
+
+**SETTINGS (theme, appearance, dark mode):**
+- User asks: "change theme" / "dark mode" / "light mode"
+- You respond: "Do you want me to route you to the settings page?"
+- User confirms: "yes" / "yeah" / "ok" / "sure"
+- You respond: "No problem! [ROUTE:/settings]"
+
+**LOGOUT:**
+- User asks: "logout" / "log me out" / "sign out"
+- You respond: "Are you sure you want to logout?"
+- User confirms: "yes" / "yeah" / "ok" / "sure"
+- You respond: "Logging you out... [ACTION:LOGOUT]"
+
+**CRITICAL RULES:**
+1. NEVER use [ROUTE:/profile] for theme/settings requests
+2. NEVER use [ROUTE:/settings] for profile/password requests
+3. NEVER use [ACTION:LOGOUT] unless user wants to logout
+4. Only output ONE command tag per message
+5. NEVER mention the command tags in your questions, only in the final action response
+6. Match the request type to the correct command EXACTLY
+7. DO NOT introduce yourself with a long message. Keep responses short and helpful.
+8. For simple questions like "who are you" or "hi", give a brief 1-2 sentence response.
+
+**EXAMPLES OF CORRECT BEHAVIOR:**
+User: "hi who are you"
+You: "I'm GupShup AI, your assistant in this chat app. How can I help?"
+
+User: "I want to change the theme"
+You: "Do you want me to route you to the settings page?"
+User: "yes"
+You: "No problem! [ROUTE:/settings]"
+
+User: "how can I update my password?"
+You: "Do you want me to route you to the profile page?"
+User: "yes please"
+You: "Sure, taking you there! [ROUTE:/profile]"
+
+Be concise, helpful, and remember you're integrated into this specific chat application built by cybersecurity students.`;
+
+export const sendMessageToGemini = async (message, retryCount = 0, conversationHistory = []) => {
   console.log('🤖 Attempting to send message to GupShup AI...');
   
   // Check if we can make a request BEFORE attempting it
@@ -138,6 +194,18 @@ export const sendMessageToGemini = async (message, retryCount = 0) => {
     
     console.log('🤖 Sending message to GupShup AI via Google Gemini...');
     
+    // Build conversation context - include last 6 messages for context (3 exchanges)
+    let conversationContext = SYSTEM_PROMPT;
+    if (conversationHistory.length > 0) {
+      const recentHistory = conversationHistory.slice(-6);
+      conversationContext += "\n\nRecent conversation:\n";
+      recentHistory.forEach(msg => {
+        const role = msg.senderId === 'user' ? 'User' : 'Assistant';
+        conversationContext += `${role}: ${msg.text}\n`;
+      });
+    }
+    conversationContext += `\nUser: ${message}`;
+    
     const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
       method: 'POST',
       headers: {
@@ -148,14 +216,14 @@ export const sendMessageToGemini = async (message, retryCount = 0) => {
           {
             parts: [
               {
-                text: `${SYSTEM_PROMPT}\n\nUser: ${message}`
+                text: conversationContext
               }
             ]
           }
         ],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 800, // Reduced to be conservative
+          maxOutputTokens: 800,
           topP: 0.8,
           topK: 10
         },
@@ -189,7 +257,7 @@ export const sendMessageToGemini = async (message, retryCount = 0) => {
           const waitTime = Math.pow(2, retryCount) * 20000; // 20s, 40s
           console.log(`⏱️ Rate limited. Auto-retrying in ${waitTime/1000}s... (attempt ${retryCount + 1}/2)`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
-          return sendMessageToGemini(message, retryCount + 1);
+          return sendMessageToGemini(message, retryCount + 1, conversationHistory);
         } else {
           // Update local rate limit tracking to prevent immediate retries
           const now = Date.now();

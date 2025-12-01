@@ -3,16 +3,98 @@ import { useGeminiStore } from "../store/useGeminiStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils.js";
 import { Sparkles, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const GeminiChatContainer = () => {
   const { geminiMessages, isGeminiLoading, geminiUser, clearGeminiMessages } = useGeminiStore();
-  const { authUser } = useAuthStore();
+  const { authUser, logout } = useAuthStore();
   const messageEndRef = useRef(null);
+  const navigate = useNavigate();
+  const processedMessageIdsRef = useRef(new Set());
+
+  // Clean up old sessionStorage on mount and reset processed messages when user changes
+  useEffect(() => {
+    sessionStorage.removeItem('gupshup_last_route_id');
+    // Clear processed IDs when auth user changes (login/logout)
+    processedMessageIdsRef.current.clear();
+  }, [authUser?._id]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [geminiMessages]);
+
+  // Handle AI routing commands - only process new unprocessed messages
+  useEffect(() => {
+    if (geminiMessages.length > 0) {
+      const lastMessage = geminiMessages[geminiMessages.length - 1];
+      
+      console.log('🔍 Checking last message:', {
+        id: lastMessage._id,
+        sender: lastMessage.senderId,
+        text: lastMessage.text?.substring(0, 100),
+        createdAt: lastMessage.createdAt
+      });
+      
+      // Only process AI messages
+      if (lastMessage.senderId === 'gupshup-ai' && lastMessage.text && lastMessage._id) {
+        
+        // Skip if this message was already processed
+        if (processedMessageIdsRef.current.has(lastMessage._id)) {
+          console.log('⏭️ Message already processed, skipping:', lastMessage._id);
+          return;
+        }
+        
+        // Check if message is recent (within last 2 seconds) to prevent processing old messages from history
+        const messageTime = new Date(lastMessage.createdAt).getTime();
+        const now = Date.now();
+        const ageInSeconds = (now - messageTime) / 1000;
+        const isRecent = (now - messageTime) < 2000; // Only 2 seconds
+
+        console.log('⏰ Message age:', {
+          ageInSeconds: ageInSeconds.toFixed(2),
+          isRecent,
+          messageTime: new Date(messageTime).toISOString(),
+          now: new Date(now).toISOString()
+        });
+
+        if (!isRecent) {
+          console.log('⏸️ Message too old, skipping route command');
+          // Still mark as processed to avoid checking again
+          processedMessageIdsRef.current.add(lastMessage._id);
+          return;
+        }
+
+        // Check if message contains route commands
+        const hasRouteCommand = lastMessage.text.includes('[ROUTE:') || lastMessage.text.includes('[ACTION:');
+        
+        if (!hasRouteCommand) {
+          console.log('❌ No route command found in message');
+          return;
+        }
+
+        // Mark as processed BEFORE executing to prevent duplicates
+        processedMessageIdsRef.current.add(lastMessage._id);
+        console.log('✅ Message marked as processed:', lastMessage._id);
+        console.log('📋 Total processed messages:', processedMessageIdsRef.current.size);
+
+        // Check for routing commands
+        if (lastMessage.text.includes('[ACTION:LOGOUT]')) {
+          console.log('🚪 LOGOUT action detected - logging out...');
+          setTimeout(() => {
+            logout();
+            navigate('/login');
+          }, 1500);
+        } else if (lastMessage.text.includes('[ROUTE:/settings]')) {
+          console.log('⚙️ SETTINGS route detected - navigating to /settings...');
+          setTimeout(() => navigate('/settings'), 1500);
+        } else if (lastMessage.text.includes('[ROUTE:/profile]')) {
+          console.log('👤 PROFILE route detected - navigating to /profile...');
+          setTimeout(() => navigate('/profile'), 1500);
+        }
+      }
+    }
+  }, [geminiMessages, navigate, logout, authUser?._id]);
 
   return (
     <div className="flex-1 flex flex-col overflow-auto">
@@ -107,7 +189,7 @@ const GeminiChatContainer = () => {
               )}
               {message.text && (
                 <div className="whitespace-pre-wrap">
-                  {message.text}
+                  {message.text.replace(/\[ROUTE:.*?\]|\[ACTION:.*?\]/g, '')}
                 </div>
               )}
             </div>

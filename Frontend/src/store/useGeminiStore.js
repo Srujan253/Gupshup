@@ -94,8 +94,8 @@ export const useGeminiStore = create((set, get) => ({
         // Send image with text prompt to GupShup AI
         response = await sendImageToGemini(imageData, message || "What's in this image?");
       } else {
-        // Send text message to GupShup AI
-        response = await sendMessageToGemini(message);
+        // Send text message with conversation history to GupShup AI
+        response = await sendMessageToGemini(message, 0, geminiMessages);
       }
 
       const processingTime = Date.now() - startTime;
