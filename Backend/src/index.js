@@ -28,7 +28,7 @@ app.use(
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-      connectSrc: ["'self'", "https://gupshup-rbcp.onrender.com", "wss://gupshup-rbcp.onrender.com"],
+      connectSrc: ["'self'", "https://gupshup-rbcp.onrender.com", "wss://gupshup-rbcp.onrender.com",  "https://generativelanguage.googleapis.com"],
       imgSrc: [
         "'self'",
         "data:",
