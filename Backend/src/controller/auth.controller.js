@@ -57,7 +57,7 @@ const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') =>
     const mailOptions = {
       from: {
         name: 'GupShup Team',
-        address: process.env.BREVO_LOGIN
+        address: 'srujanhm135@gmail.com'
       },
       to: email,
       subject: '🔐 GupShup - Email Verification Code',
