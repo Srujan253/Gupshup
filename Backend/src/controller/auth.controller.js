@@ -72,7 +72,7 @@ const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') =>
                   ${otp}
                 </div>
                 <p style="color: #6b7280; font-size: 14px; margin: 15px 0 0 0;">
-                  Valid for 5 minutes only
+                  Valid for 10 minutes only
                 </p>
               </div>
 
@@ -135,7 +135,7 @@ const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') =>
 
 Your email verification code is: ${otp}
 
-This code will expire in 5 minutes.
+This code will expire in 10 minutes.
 
 Please enter this code on the GupShup registration page to complete your account setup.
 
@@ -222,7 +222,7 @@ export const sendOTP = async (req, res) => {
 
     // Generate OTP
     const otp = generateOTP();
-    const otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+    const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     console.log(`🔢 Generated OTP for ${email}: ${otp} (expires at ${new Date(otpExpiry)})`);
 
@@ -351,7 +351,7 @@ export const resendOTP = async (req, res) => {
 
     // Generate new OTP
     const otp = generateOTP();
-    const otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+    const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     console.log(`🔢 Generated new OTP for ${email}: ${otp}`);
 
