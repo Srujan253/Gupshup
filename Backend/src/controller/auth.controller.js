@@ -3,13 +3,39 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 import crypto from "crypto";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 // In-memory OTP storage (In production, use Redis or database)
 const otpStorage = new Map();
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Create email transporter for Brevo
+const createEmailTransporter = () => {
+  try {
+    console.log(`🔐 Email credentials check:`);
+    console.log(`   NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`   Brevo Login: ${process.env.BREVO_LOGIN}`);
+    console.log(`   Brevo Pass length: ${process.env.BREVO_PASSWORD?.length} characters`);
+    
+    if (!process.env.BREVO_LOGIN || !process.env.BREVO_PASSWORD) {
+      throw new Error(`Missing Brevo credentials - LOGIN: ${!!process.env.BREVO_LOGIN}, PASS: ${!!process.env.BREVO_PASSWORD}`);
+    }
+    
+    return nodemailer.createTransport({
+      host: "smtp-relay.brevo.com",
+      port: 587,
+      secure: false, // Use STARTTLS
+      auth: {
+        user: process.env.BREVO_LOGIN,
+        pass: process.env.BREVO_PASSWORD,
+      },
+      debug: process.env.NODE_ENV === 'development',
+      logger: process.env.NODE_ENV === 'development'
+    });
+  } catch (error) {
+    console.error("❌ Error creating email transporter:", error);
+    throw error;
+  }
+};
 
 // Generate 6-digit OTP
 const generateOTP = () => {
@@ -20,9 +46,19 @@ const generateOTP = () => {
 const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') => {
   try {
     console.log(`📧 Attempting to send email to: ${email}`);
+    console.log(`📧 Using Brevo SMTP config - User: ${process.env.BREVO_LOGIN}`);
     
-    const { data, error } = await resend.emails.send({
-      from: 'GupShup Team <onboarding@resend.dev>',
+    const transporter = createEmailTransporter();
+    
+    // Test the connection first
+    await transporter.verify();
+    console.log('✅ Email transporter verified successfully');
+    
+    const mailOptions = {
+      from: {
+        name: 'GupShup Team',
+        address: process.env.BREVO_LOGIN
+      },
       to: email,
       subject: '🔐 GupShup - Email Verification Code',
       html: `
@@ -142,25 +178,33 @@ const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') =>
         Developed by: Srujan H M, S K Thilak Raj, Balaji V Kodle
         Cyber Security Branch | Secure Full Stack Development Project
       `
-    });
+    };
 
-    if (error) {
-      console.error(`❌ Email sending failed:`, {
-        error: error.message,
-        name: error.name,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
-      throw new Error(`Email sending failed: ${error.message}`);
-    }
-
-    console.log(`✅ Email sent successfully. Message ID: ${data.id}`);
-    return data;
+    console.log(`📤 Sending email to: ${email}`);
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent successfully. Message ID: ${result.messageId}`);
+    
+    return result;
   } catch (error) {
     console.error(`❌ Email sending failed:`, {
       error: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
-    throw new Error(`Email sending failed: ${error.message}`);
+    
+    // Provide more specific error messages
+    if (error.code === 'EAUTH') {
+      throw new Error(`Brevo authentication failed. Check email credentials.`);
+    } else if (error.code === 'ECONNECTION') {
+      throw new Error(`Unable to connect to Brevo SMTP servers. Check internet connection.`);
+    } else if (error.responseCode === 535) {
+      throw new Error(`Brevo login failed. Credentials may be incorrect.`);
+    } else {
+      throw new Error(`Email sending failed: ${error.message}`);
+    }
   }
 };
 
@@ -716,12 +760,20 @@ export const testEmailConfig = async (req, res) => {
     
     // Check environment variables
     const emailConfig = {
-      hasApiKey: !!process.env.RESEND_API_KEY,
-      apiKeyLength: process.env.RESEND_API_KEY?.length,
+      hasLogin: !!process.env.BREVO_LOGIN,
+      hasPassword: !!process.env.BREVO_PASSWORD,
+      loginValue: process.env.BREVO_LOGIN,
+      passwordLength: process.env.BREVO_PASSWORD?.length,
       nodeEnv: process.env.NODE_ENV
     };
     
     console.log("📧 Email config check:", emailConfig);
+    
+    // Try to create transporter
+    const transporter = createEmailTransporter();
+    
+    // Verify connection
+    await transporter.verify();
     
     console.log("✅ Email configuration test passed");
     
@@ -729,8 +781,9 @@ export const testEmailConfig = async (req, res) => {
       success: true,
       message: "Email configuration is working",
       config: {
-        hasCredentials: emailConfig.hasApiKey,
-        environment: emailConfig.nodeEnv
+        hasCredentials: emailConfig.hasLogin && emailConfig.hasPassword,
+        environment: emailConfig.nodeEnv,
+        provider: 'Brevo SMTP'
       }
     });
     
@@ -742,7 +795,8 @@ export const testEmailConfig = async (req, res) => {
       message: "Email configuration test failed",
       error: error.message,
       details: {
-        hasApiKey: !!process.env.RESEND_API_KEY,
+        hasLogin: !!process.env.BREVO_LOGIN,
+        hasPassword: !!process.env.BREVO_PASSWORD,
         environment: process.env.NODE_ENV
       }
     });
