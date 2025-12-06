@@ -3,65 +3,36 @@ import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
 
 // In-memory OTP storage (In production, use Redis or database)
 const otpStorage = new Map();
-
-// Create email transporter for Brevo
-const createEmailTransporter = () => {
-  try {
-    console.log(`🔐 Email credentials check:`);
-    console.log(`   NODE_ENV: ${process.env.NODE_ENV}`);
-    console.log(`   Brevo Login: ${process.env.BREVO_LOGIN}`);
-    console.log(`   Brevo Pass length: ${process.env.BREVO_PASSWORD?.length} characters`);
-    
-    if (!process.env.BREVO_LOGIN || !process.env.BREVO_PASSWORD) {
-      throw new Error(`Missing Brevo credentials - LOGIN: ${!!process.env.BREVO_LOGIN}, PASS: ${!!process.env.BREVO_PASSWORD}`);
-    }
-    
-    return nodemailer.createTransport({
-      host: "smtp-relay.brevo.com",
-      port: 587,
-      secure: false, // Use STARTTLS
-      auth: {
-        user: process.env.BREVO_LOGIN,
-        pass: process.env.BREVO_PASSWORD,
-      },
-      debug: process.env.NODE_ENV === 'development',
-      logger: process.env.NODE_ENV === 'development'
-    });
-  } catch (error) {
-    console.error("❌ Error creating email transporter:", error);
-    throw error;
-  }
-};
 
 // Generate 6-digit OTP
 const generateOTP = () => {
   return crypto.randomInt(100000, 999999).toString();
 };
 
-// Send OTP email
+// Send OTP email using Brevo API
 const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') => {
   try {
     console.log(`📧 Attempting to send email to: ${email}`);
-    console.log(`📧 Using Brevo SMTP config - User: ${process.env.BREVO_LOGIN}`);
+    console.log(`📧 Using Brevo API Key`);
     
-    const transporter = createEmailTransporter();
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error('Missing BREVO_API_KEY in environment variables');
+    }
     
-    // Test the connection first
-    await transporter.verify();
-    console.log('✅ Email transporter verified successfully');
-    
-    const mailOptions = {
-      from: {
+    const emailData = {
+      sender: {
         name: 'GupShup Team',
-        address: 'srujanhm135@gmail.com'
+        email: 'srujanhm135@gmail.com'
       },
-      to: email,
+      to: [{
+        email: email,
+        name: fullName
+      }],
       subject: '🔐 GupShup - Email Verification Code',
-      html: `
+      htmlContent: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -160,48 +131,60 @@ const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') =>
         </body>
         </html>
       `,
-      // Plain text fallback
-      text: `
-        Welcome to GupShup, ${fullName}!
-        
-        Your email verification code is: ${otp}
-        
-        This code will expire in 5 minutes.
-        
-        Please enter this code on the GupShup registration page to complete your account setup.
-        
-        If you didn't request this code, please ignore this email.
-        
-        Best regards,
-        The GupShup Team
-        
-        Developed by: Srujan H M, S K Thilak Raj, Balaji V Kodle
-        Cyber Security Branch | Secure Full Stack Development Project
-      `
+      textContent: `Welcome to GupShup, ${fullName}!
+
+Your email verification code is: ${otp}
+
+This code will expire in 5 minutes.
+
+Please enter this code on the GupShup registration page to complete your account setup.
+
+If you didn't request this code, please ignore this email.
+
+Best regards,
+The GupShup Team
+
+Developed by: Srujan H M, S K Thilak Raj, Balaji V Kodle
+Cyber Security Branch | Secure Full Stack Development Project`
     };
 
-    console.log(`📤 Sending email to: ${email}`);
-    const result = await transporter.sendMail(mailOptions);
+    console.log(`📤 Sending email via Brevo API to: ${email}`);
+    
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': process.env.BREVO_API_KEY,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(emailData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`❌ Brevo API Error:`, {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      });
+      throw new Error(`Brevo API failed: ${response.status} ${response.statusText} - ${JSON.stringify(errorData)}`);
+    }
+
+    const result = await response.json();
     console.log(`✅ Email sent successfully. Message ID: ${result.messageId}`);
     
     return result;
   } catch (error) {
     console.error(`❌ Email sending failed:`, {
       error: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
     
     // Provide more specific error messages
-    if (error.code === 'EAUTH') {
-      throw new Error(`Brevo authentication failed. Check email credentials.`);
-    } else if (error.code === 'ECONNECTION') {
-      throw new Error(`Unable to connect to Brevo SMTP servers. Check internet connection.`);
-    } else if (error.responseCode === 535) {
-      throw new Error(`Brevo login failed. Credentials may be incorrect.`);
+    if (error.message.includes('401')) {
+      throw new Error(`Brevo API authentication failed. Check API key.`);
+    } else if (error.message.includes('ENOTFOUND') || error.message.includes('fetch')) {
+      throw new Error(`Unable to connect to Brevo API. Check internet connection.`);
     } else {
       throw new Error(`Email sending failed: ${error.message}`);
     }
@@ -760,30 +743,41 @@ export const testEmailConfig = async (req, res) => {
     
     // Check environment variables
     const emailConfig = {
-      hasLogin: !!process.env.BREVO_LOGIN,
-      hasPassword: !!process.env.BREVO_PASSWORD,
-      loginValue: process.env.BREVO_LOGIN,
-      passwordLength: process.env.BREVO_PASSWORD?.length,
+      hasApiKey: !!process.env.BREVO_API_KEY,
+      apiKeyLength: process.env.BREVO_API_KEY?.length,
       nodeEnv: process.env.NODE_ENV
     };
     
     console.log("📧 Email config check:", emailConfig);
     
-    // Try to create transporter
-    const transporter = createEmailTransporter();
+    if (!process.env.BREVO_API_KEY) {
+      throw new Error('Missing BREVO_API_KEY in environment variables');
+    }
     
-    // Verify connection
-    await transporter.verify();
+    // Test API connection
+    const response = await fetch('https://api.brevo.com/v3/account', {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'api-key': process.env.BREVO_API_KEY
+      }
+    });
     
+    if (!response.ok) {
+      throw new Error(`Brevo API test failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const accountData = await response.json();
     console.log("✅ Email configuration test passed");
     
     res.status(200).json({
       success: true,
       message: "Email configuration is working",
       config: {
-        hasCredentials: emailConfig.hasLogin && emailConfig.hasPassword,
+        hasCredentials: emailConfig.hasApiKey,
         environment: emailConfig.nodeEnv,
-        provider: 'Brevo SMTP'
+        provider: 'Brevo API',
+        accountEmail: accountData.email
       }
     });
     
@@ -795,10 +789,10 @@ export const testEmailConfig = async (req, res) => {
       message: "Email configuration test failed",
       error: error.message,
       details: {
-        hasLogin: !!process.env.BREVO_LOGIN,
-        hasPassword: !!process.env.BREVO_PASSWORD,
+        hasApiKey: !!process.env.BREVO_API_KEY,
         environment: process.env.NODE_ENV
       }
     });
   }
 };
+    
