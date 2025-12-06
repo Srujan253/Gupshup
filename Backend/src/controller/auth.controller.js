@@ -25,7 +25,7 @@ const sendOTPEmail = async (email, otp, fullName, emailType = 'registration') =>
     const emailData = {
       sender: {
         name: 'GupShup Team',
-        email: 'srujanhm135@gmail.com'
+        email: 'no-reply@mybrevo.com'
       },
       to: [{
         email: email,
